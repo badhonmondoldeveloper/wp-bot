@@ -9,13 +9,20 @@ const path = require("path");
 const fs = require("fs");
 const qrcode = require("qrcode");
 const pino = require("pino");
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion,
-  DisconnectReason,
-  Browsers,
-} = require("baileys");
+const db = require("./db.js");
+
+let makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, Browsers;
+async function getBaileys() {
+  if (!makeWASocket) {
+    const b = await import("baileys");
+    makeWASocket = b.default || b.makeWASocket;
+    useMultiFileAuthState = b.useMultiFileAuthState;
+    fetchLatestBaileysVersion = b.fetchLatestBaileysVersion;
+    DisconnectReason = b.DisconnectReason;
+    Browsers = b.Browsers;
+  }
+  return { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, Browsers };
+}
 
 const PORT = process.env.PORT || 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL);
@@ -106,6 +113,7 @@ function saveBusinessMemory(newMem) {
   try {
     businessMemory = { ...businessMemory, ...newMem };
     fs.writeFileSync(MEMORY_FILE, JSON.stringify(businessMemory, null, 2));
+    db.saveBusinessMemoryToDb(businessMemory).catch((err) => console.error("DB save memory err:", err.message));
     // Auto recompile system prompt
     config.systemPrompt = compileSystemPrompt(businessMemory);
     saveConfig();
@@ -174,6 +182,11 @@ function savePayments(list) {
   try {
     paymentsList = list;
     fs.writeFileSync(PAYMENTS_FILE, JSON.stringify(paymentsList, null, 2));
+    if (Array.isArray(list)) {
+      for (const p of list.slice(0, 50)) {
+        db.savePaymentToDb(p).catch(() => {});
+      }
+    }
     return true;
   } catch (e) {
     console.error("Error saving payments:", e.message);
@@ -649,6 +662,7 @@ try {
 function saveConfig() {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    db.saveFullConfigToDb(config).catch((err) => console.error("DB save config err:", err.message));
   } catch (e) {
     console.error("Config save error:", e.message);
   }
@@ -657,7 +671,7 @@ function saveConfig() {
 // ---------- App State ----------
 let sock = null;
 let reconnectTimeout = null;
-let status = "starting"; // starting | waiting_qr | connected | reconnecting | stopped
+let status = IS_VERCEL ? "ready" : "starting"; // starting | waiting_qr | connected | reconnecting | stopped | ready
 let qrDataUrl = null;
 let pairingCode = null;
 let lastError = null;
@@ -669,7 +683,61 @@ const botMessageIds = new Set(); // tracks bot-sent messages to avoid loops
 function addLog(kind, text) {
   log.unshift({ at: new Date().toISOString(), kind, text });
   if (log.length > 300) log.length = 300;
+  db.addLogToDb(kind, text).catch(() => {});
 }
+
+async function initDatabaseSync() {
+  try {
+    const initialized = await db.initDb();
+    if (!initialized) return;
+
+    // 1. Sync Business Memory from DB
+    const dbMem = await db.loadBusinessMemoryFromDb();
+    if (dbMem && Object.keys(dbMem).length > 0) {
+      businessMemory = { ...businessMemory, ...dbMem };
+      try { fs.writeFileSync(MEMORY_FILE, JSON.stringify(businessMemory, null, 2)); } catch {}
+    } else {
+      await db.saveBusinessMemoryToDb(businessMemory);
+    }
+
+    // 2. Sync Config from DB
+    const dbConfig = await db.loadConfigFromDb();
+    if (dbConfig && Object.keys(dbConfig).length > 0) {
+      config = { ...config, ...dbConfig };
+      try { fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2)); } catch {}
+    } else {
+      await db.saveFullConfigToDb(config);
+    }
+
+    // 3. Sync Payments from DB
+    const dbPayments = await db.loadPaymentsFromDb();
+    if (dbPayments && dbPayments.length > 0) {
+      const mergedMap = new Map();
+      for (const p of paymentsList) if (p.id) mergedMap.set(p.id, p);
+      for (const p of dbPayments) if (p.id) mergedMap.set(p.id, p);
+      paymentsList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      try { fs.writeFileSync(PAYMENTS_FILE, JSON.stringify(paymentsList, null, 2)); } catch {}
+    } else if (paymentsList.length > 0) {
+      for (const p of paymentsList) await db.savePaymentToDb(p);
+    }
+
+    // 4. Load recent system logs
+    const dbLogs = await db.getRecentLogsFromDb(50);
+    if (dbLogs && dbLogs.length > 0 && log.length === 0) {
+      for (const l of dbLogs) {
+        log.push({
+          at: typeof l.at === "object" ? l.at.toISOString() : String(l.at),
+          kind: l.kind || "info",
+          text: l.text || "",
+        });
+      }
+    }
+    console.log("[TiDB] Synchronized config, memory, and payments with Cloud DB successfully.");
+  } catch (e) {
+    console.warn("[TiDB Sync Warning]:", e.message);
+  }
+}
+initDatabaseSync().catch(() => {});
 
 // Gemini Safety Settings (Bypass all false positives and refusals)
 const GEMINI_SAFETY_SETTINGS = [
@@ -1091,7 +1159,8 @@ async function startBot() {
       fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
 
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const baileys = await getBaileys();
+    const { state, saveCreds } = await baileys.useMultiFileAuthState(AUTH_DIR);
 
     // If auth directory has abandoned/unregistered credentials from previous pairing, clear them so fresh QR can generate
     if (state.creds && !state.creds.registered && state.creds.me && !pairingCode) {
@@ -1104,16 +1173,16 @@ async function startBot() {
 
     let version;
     try {
-      const v = await fetchLatestBaileysVersion();
+      const v = await baileys.fetchLatestBaileysVersion();
       version = v.version;
     } catch (e) {
       console.warn("Could not fetch latest Baileys version, using default:", e.message);
     }
 
-    sock = makeWASocket({
+    sock = baileys.makeWASocket({
       version,
       auth: state,
-      browser: Browsers.windows("Chrome"),
+      browser: baileys.Browsers.windows("Chrome"),
       markOnlineOnConnect: false,
       logger: pino({ level: "silent" }),
     });
@@ -1166,7 +1235,7 @@ async function startBot() {
       }
       if (connection === "close") {
         const code = lastDisconnect?.error?.output?.statusCode;
-        const isLoggedOut = code === DisconnectReason.loggedOut;
+        const isLoggedOut = code === baileys.DisconnectReason.loggedOut;
         const isStaleAuth = !state.creds?.registered && (code === 401 || code === 408 || code === 428);
 
         if (isLoggedOut || isStaleAuth) {
@@ -1875,8 +1944,20 @@ app.post("/api/reset-qr", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  const candidates = [
+    path.join(__dirname, "public", "index.html"),
+    path.join(__dirname, "..", "public", "index.html"),
+    path.join(process.cwd(), "public", "index.html"),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).send("Dashboard HTML file not found");
 });
+
+app.get("/index.html", (req, res) => res.redirect("/"));
 
 process.on("SIGINT", () => {
   if (sock) try { sock.end(); } catch {}
