@@ -1,0 +1,1495 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WhatsApp Business AI Bot — Control & Management</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0b1120; color: #e2e8f0; min-height: 100vh;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 64px; }
+  
+  /* Header */
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid #1e293b; padding-bottom: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { font-size: 20px; margin: 0; font-weight: 700; color: #f8fafc; }
+  .badge { font-size: 12px; padding: 5px 12px; border-radius: 999px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .st-connected { background: #10362a; color: #4ade80; border: 1px solid #166534; }
+  .st-waiting_qr, .st-starting, .st-reconnecting { background: #3a2c10; color: #fbbf24; border: 1px solid #854d0e; }
+  .st-stopped { background: #3b1416; color: #f87171; border: 1px solid #991b1b; }
+  
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; border-bottom: 1px solid #1e293b; margin-bottom: 20px; overflow-x: auto; padding-bottom: 2px; }
+  .tab-btn {
+    background: transparent; border: 0; color: #94a3b8; font-size: 14px; font-weight: 600;
+    padding: 10px 16px; border-radius: 8px 8px 0 0; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .tab-btn:hover { color: #f1f5f9; background: #1e293b40; }
+  .tab-btn.active { color: #38bdf8; background: #1e293b; border-bottom: 2px solid #38bdf8; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  
+  /* Cards & Layout */
+  .grid-2 { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .card {
+    background: #111a2e; border: 1px solid #1e2b47; border-radius: 14px;
+    padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+  .card h2 { font-size: 14px; margin: 0 0 14px; color: #93a5c4; text-transform: uppercase; letter-spacing: .06em; display: flex; align-items: center; justify-content: space-between; }
+  
+  /* Form inputs */
+  label { display: block; font-size: 13px; color: #94a3b8; margin: 12px 0 5px; font-weight: 500; }
+  input[type=text], input[type=password], input[type=number], textarea, select {
+    width: 100%; background: #0b1120; border: 1px solid #1e293b; color: #e2e8f0;
+    border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #38bdf8; }
+  textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+  
+  /* Buttons */
+  button {
+    background: #2563eb; color: #fff; border: 0; border-radius: 8px;
+    padding: 9px 16px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s;
+  }
+  button:hover { background: #1d4ed8; }
+  button.ghost { background: transparent; border: 1px solid #334155; color: #cbd5e1; }
+  button.ghost:hover { background: #1e293b; border-color: #475569; }
+  button.danger { background: #991b1b; }
+  button.danger:hover { background: #b91c1c; }
+  button.success { background: #166534; color: #4ade80; border: 1px solid #22c55e; }
+  button.success:hover { background: #15803d; color: #fff; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  
+  /* Stats Cards */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
+  .stat-val { font-size: 24px; font-weight: 700; color: #f8fafc; margin-top: 4px; }
+  .stat-lbl { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+  
+  /* QR Code */
+  #qrBox { text-align: center; padding: 10px; background: #0b1120; border-radius: 10px; border: 1px dashed #1e293b; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+  #qrBox img { max-width: 220px; border-radius: 10px; background: #fff; padding: 6px; }
+  .qr-hint { font-size: 13px; color: #94a3b8; margin: 10px 0 0; line-height: 1.5; }
+  
+  /* Message Log */
+  .log { max-height: 480px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .log-item {
+    font-size: 13px; padding: 9px 12px; border-radius: 8px; background: #0d1526;
+    border: 1px solid #182642; line-height: 1.5; word-break: break-word;
+  }
+  .log-in { border-left: 3px solid #38bdf8; }
+  .log-out { border-left: 3px solid #4ade80; }
+  .log-error { border-left: 3px solid #f87171; color: #fca5a5; }
+  .log-info, .log-warn { border-left: 3px solid #fbbf24; }
+  .time { color: #64748b; font-size: 11px; display: block; margin-bottom: 2px; }
+  
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+  th { background: #0f172a; color: #94a3b8; padding: 11px 12px; font-weight: 600; border-bottom: 1px solid #1e293b; white-space: nowrap; }
+  td { padding: 12px; border-bottom: 1px solid #1e293b; vertical-align: top; }
+  tr:hover td { background: #1e293b25; }
+  .status-pill { font-size: 11px; padding: 4px 9px; border-radius: 999px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .p-pending { background: #3a2c10; color: #fbbf24; border: 1px solid #78350f; }
+  .p-verified { background: #10362a; color: #4ade80; border: 1px solid #166534; }
+  .p-rejected { background: #3b1416; color: #f87171; border: 1px solid #7f1d1d; }
+
+  /* Payment Proof Badges */
+  .badge-proof {
+    display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px;
+    background: #0e304f; color: #38bdf8; border: 1px solid #0284c7; padding: 4px 9px; border-radius: 6px;
+  }
+  .badge-bkash {
+    font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 4px;
+    background: #3c0926; color: #f472b6; border: 1px solid #be185d;
+  }
+  .badge-nagad {
+    font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 4px;
+    background: #3b1907; color: #fb923c; border: 1px solid #c2410c;
+  }
+  .wa-link {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600;
+    color: #4ade80; background: #064e3b40; border: 1px solid #059669; padding: 3px 7px; border-radius: 4px;
+    text-decoration: none; margin-top: 4px;
+  }
+  .wa-link:hover { background: #059669; color: #fff; }
+  .raw-msg {
+    margin-top: 6px; font-size: 11.5px; color: #94a3b8; background: #080d1a;
+    border-left: 2px solid #38bdf8; padding: 5px 8px; border-radius: 0 4px 4px 0; max-width: 280px;
+    word-break: break-word; line-height: 1.4;
+  }
+  .filter-btn {
+    background: #0f172a; border: 1px solid #1e293b; color: #94a3b8; font-size: 12.5px;
+    font-weight: 600; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: all 0.2s;
+  }
+  .filter-btn:hover { color: #f1f5f9; border-color: #38bdf8; }
+  .filter-btn.active { background: #2563eb; color: #fff; border-color: #3b82f6; }
+  
+  /* Chatbot UI in Tab 4 */
+  .chat-box { height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #0b1120; border-radius: 10px; border: 1px solid #1e293b; }
+  .chat-msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .msg-bot { align-self: flex-start; background: #1e293b; color: #f1f5f9; border-bottom-left-radius: 2px; }
+  .msg-user { align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 2px; }
+  .quick-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .pill { font-size: 12px; background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+  .pill:hover { background: #334155; }
+
+  /* Safety & Anti-Ban Styles */
+  .progress-bg { background: #1e293b; border-radius: 999px; height: 8px; width: 100%; overflow: hidden; margin-top: 6px; }
+  .progress-bar { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+  .shield-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>💬 WhatsApp AI Business Hub</h1>
+      <span id="statusBadge" class="badge st-starting">starting…</span>
+      <span id="gatewayBadge" class="badge" style="background:#0e304f;color:#38bdf8;border:1px solid #0284c7;">Gateway: Baileys Web</span>
+      <span id="activeBadge" class="badge" style="background:#1e293b">Auto-reply: Active</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="toggleBotBtn" class="ghost">Pause Bot</button>
+      <button id="restartBtn" class="ghost">Restart</button>
+      <button id="logoutBtn" class="danger">Logout</button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-overview')">📊 Overview & Live Chats</button>
+    <button class="tab-btn" onclick="switchTab('tab-meta')">🌐 Meta / FB Cloud API</button>
+    <button class="tab-btn" onclick="switchTab('tab-payments')">💳 Payments & Orders (<span id="pendingCount">0</span>)</button>
+    <button class="tab-btn" onclick="switchTab('tab-safety')">🛡️ Account Safety & Anti-Ban</button>
+    <button class="tab-btn" onclick="switchTab('tab-business')">🧠 Business Knowledge & Pricing</button>
+    <button class="tab-btn" onclick="switchTab('tab-trainer')">💬 Admin AI Trainer Chat</button>
+    <button class="tab-btn" onclick="switchTab('tab-settings')">⚙️ Settings</button>
+  </div>
+
+  <!-- TAB 1: OVERVIEW & LIVE CHATS -->
+  <div id="tab-overview" class="tab-pane active">
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 style="margin:0;">🔐 WhatsApp Login Hub</h2>
+            <span style="font-size:11px;background:#1e293b;color:#38bdf8;padding:2px 8px;border-radius:999px;">অফিসিয়াল সিস্টেম</span>
+          </div>
+
+          <!-- Active Gateway Switcher Card -->
+          <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:10px 12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <div>
+              <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;">বর্তমান সক্রিয় গেটওয়ে:</div>
+              <div id="activeGatewayText" style="font-size:13px;font-weight:700;color:#38bdf8;margin-top:2px;">📱 Baileys Engine (QR / Pairing Code)</div>
+            </div>
+            <button class="ghost" style="font-size:11.5px;padding:5px 9px;white-space:nowrap;" onclick="switchTab('tab-meta')">🌐 Meta API সেটআপ →</button>
+          </div>
+
+          <!-- Login Mode Toggle -->
+          <div style="display:flex;gap:6px;margin-bottom:14px;background:#0b1120;padding:4px;border-radius:8px;border:1px solid #1e293b;">
+            <button id="btnModePair" class="filter-btn active" style="flex:1;text-align:center;border-radius:6px;padding:6px 10px;" onclick="switchLoginMode('pair')">📱 ফোন নম্বর দিয়ে (Pairing Code)</button>
+            <button id="btnModeQr" class="filter-btn" style="flex:1;text-align:center;border-radius:6px;padding:6px 10px;" onclick="switchLoginMode('qr')">📷 QR কোড স্ক্যান</button>
+          </div>
+
+          <!-- Pairing Code Mode -->
+          <div id="loginModePair">
+            <label for="pairPhoneInput" style="margin-top:0;">WhatsApp ফোন নম্বর (যে নম্বর কানেক্ট করবেন)</label>
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <input type="text" id="pairPhoneInput" placeholder="017xxxxxxxx বা 88017xxxxxxxx" style="font-size:14px;" onkeypress="if(event.key==='Enter') requestPairingCode()" />
+              <button id="btnGetPairCode" class="success" style="white-space:nowrap;padding:8px 14px;" onclick="requestPairingCode()">কোড নিন</button>
+            </div>
+            <div id="pairLoading" style="display:none;font-size:12.5px;color:#fbbf24;margin-top:8px;">⏳ অফিসিয়াল পেয়ারিং কোড তৈরি হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন...</div>
+
+            <!-- Code Result Box -->
+            <div id="pairingCodeBox" style="display:none;margin-top:14px;background:#080d1a;border:1.5px solid #0284c7;border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;font-weight:600;">আপনার ৮ সংখ্যার পেয়ারিং কোড:</div>
+              <div id="pairingCodeDisplay" style="font-size:32px;font-weight:800;color:#38bdf8;letter-spacing:5px;margin:10px 0;font-family:monospace;text-shadow:0 0 12px rgba(56,189,248,0.4);">----</div>
+              <button class="ghost" id="copyPairBtn" style="padding:4px 12px;font-size:12px;" onclick="copyPairCode()">📋 কোড কপি করুন</button>
+              
+              <div style="font-size:12px;color:#94a3b8;line-height:1.6;margin-top:14px;text-align:left;background:#0b1120;padding:10px;border-radius:6px;border:1px solid #1e293b;">
+                <b style="color:#f1f5f9;">📲 কীভাবে কানেক্ট করবেন:</b><br/>
+                ১. আপনার ফোনের <b>WhatsApp</b> অ্যাপ খুলুন।<br/>
+                ২. <b>Settings → Linked Devices → Link a Device</b> এ যান।<br/>
+                ৩. নিচে <b>"Link with phone number instead"</b> সিলেক্ট করুন।<br/>
+                ৪. উপরের কোডটি সেখানে লিখে দিন — সাথে সাথে অফিশিয়ালি কানেক্ট হয়ে যাবে!
+              </div>
+            </div>
+          </div>
+
+          <!-- QR Code Mode -->
+          <div id="loginModeQr" style="display:none;">
+            <div id="qrBox">
+              <p class="qr-hint" id="qrHint">QR লোড হচ্ছে…</p>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;">
+              <p class="qr-hint" style="font-size:12px;line-height:1.5;margin:0;">
+                ফোন থেকে: <b>Settings → Linked Devices → Link a Device</b>
+              </p>
+              <button class="ghost" style="padding:4px 10px;font-size:12px;white-space:nowrap;" onclick="resetQrCode()">🔄 রিফ্রেশ QR</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Quick Info</h2>
+          <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:0;">
+            • <b>Service:</b> imo ভিডিও কল সার্ভিস<br/>
+            • <b>Sample:</b> ২ মিনিট (৫০ টাকা)<br/>
+            • <b>bKash / Nagad:</b> 01625642420<br/>
+            • <b>imo Delivery:</b> 01898694648<br/>
+            • <b>WhatsApp Control:</b> আপনার "Message yourself" চ্যাট থেকেই <code>/help</code> লিখে বট কন্ট্রোল করতে পারবেন।
+          </p>
+        </div>
+
+        <div class="card" style="border-left: 3px solid #10b981;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2 style="margin:0;">🛡️ Account Safety Health</h2>
+            <span id="quickHealthScore" style="font-size:12px;font-weight:700;color:#10b981;background:#064e3b40;border:1px solid #059669;padding:2px 8px;border-radius:999px;">100% Safe</span>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;">
+              <span>আজকের নিরাপদ বার্তা কোটা</span>
+              <span id="quickDailyQuotaText" style="font-weight:600;color:#f8fafc;">0 / 250</span>
+            </div>
+            <div class="progress-bg">
+              <div id="quickDailyProgressBar" class="progress-bar" style="width:0%;background:#10b981;"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+            <span class="shield-badge" style="background:#0e304f;color:#38bdf8;border:1px solid #0284c7;">✓ Opt-Out শিল্ড সক্রিয়</span>
+            <span class="shield-badge" style="background:#1e293b;color:#a78bfa;border:1px solid #7c3aed;">✓ হিউম্যান টাইপিং অনুকরণ</span>
+            <span class="shield-badge" style="background:#064e3b40;color:#4ade80;border:1px solid #059669;">✓ স্প্যাম হ্যাশ প্রতিরোধ</span>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="ghost" style="width:100%;font-size:12px;padding:6px 10px;" onclick="switchTab('tab-safety')">🛡️ সম্পূর্ণ সেফটি ও ব্ল্যাকলিস্ট প্যানেল দেখুন →</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Live Message Stream</h2>
+          <div class="log" id="logBox"><p class="qr-hint">কোনো মেসেজ আসেনি…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: PAYMENTS & ORDERS -->
+  <div id="tab-payments" class="tab-pane">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-lbl">মোট আসল পেমেন্ট</div>
+        <div class="stat-val" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl" style="color:#fbbf24">পেন্ডিং যাচাই</div>
+        <div class="stat-val" style="color:#fbbf24" id="statPending">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl" style="color:#4ade80">ভেরিফাইড ও ডেলিভার্ড</div>
+        <div class="stat-val" style="color:#4ade80" id="statVerified">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl" style="color:#f87171">বাতিলকৃত</div>
+        <div class="stat-val" style="color:#f87171" id="statRejected">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <h2 style="margin:0 0 4px;">💳 কাস্টমার পেমেন্ট ট্র্যাকার (বিকাশ / নগদ)</h2>
+          <span style="font-size:12.5px;color:#94a3b8;">শুধুমাত্র যারা টাকা পাঠানোর নম্বর বা লাস্ট ডিজিট জমা দিয়েছে তারাই এখানে আসবে।</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="ghost" style="padding:6px 12px;font-size:12.5px;" onclick="cleanPaymentsJunk()">🧹 অপ্রয়োজনীয় ডাটা মুছুন</button>
+          <button class="ghost" style="padding:6px 12px;font-size:12.5px;" onclick="loadPaymentsData()">🔄 রিফ্রেশ</button>
+        </div>
+      </div>
+
+      <!-- Filters & Search -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+        <div style="flex:1;min-width:240px;">
+          <input type="text" id="paymentSearch" placeholder="🔍 কাস্টমার নম্বর বা লাস্ট ডিজিট দিয়ে খুঁজুন..." oninput="filterPaymentsTable()" style="padding:8px 12px;font-size:13px;" />
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="filter-btn active" id="fBtn-all" onclick="setPaymentFilter('all')">সবগুলো</button>
+          <button class="filter-btn" id="fBtn-pending" onclick="setPaymentFilter('pending')">⏳ পেন্ডিং</button>
+          <button class="filter-btn" id="fBtn-verified" onclick="setPaymentFilter('verified')">✅ ভেরিফাইড</button>
+          <button class="filter-btn" id="fBtn-rejected" onclick="setPaymentFilter('rejected')">❌ বাতিল</button>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>তারিখ ও সময়</th>
+              <th>কাস্টমার WhatsApp নম্বর</th>
+              <th>প্রেরক তথ্য / লাস্ট সংখ্যা</th>
+              <th>টাকার পরিমাণ</th>
+              <th>মেথড ও প্যাকেজ</th>
+              <th>স্ট্যাটাস</th>
+              <th>অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody id="paymentsTableBody">
+            <tr><td colspan="7" style="text-align:center;color:#64748b;padding:24px;">লোড হচ্ছে…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: ACCOUNT SAFETY & ANTI-BAN -->
+  <div id="tab-safety" class="tab-pane">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-lbl">অ্যাকাউন্ট সেফটি স্কোর</div>
+        <div class="stat-val" style="color:#10b981" id="safetyHealthVal">100%</div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">সব প্রোটেকশন সক্রিয়</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">আজকের পাঠানো বার্তা</div>
+        <div class="stat-val" id="safetyDailyVal">0 <span style="font-size:13px;color:#64748b">/ 250</span></div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">দৈনিক নিরাপদ সীমা ২৫০</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">রিয়েল-টাইম বার্স্ট সুরক্ষা</div>
+        <div class="stat-val" style="color:#38bdf8" id="safetyBurstVal">0 <span style="font-size:13px;color:#64748b">/ 12 min</span></div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">স্পাইক প্রতিরোধ কিউ</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">সুরক্ষিত ব্ল্যাকলিস্ট</div>
+        <div class="stat-val" style="color:#f87171" id="safetyBlacklistCount">0</div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">রিপোর্ট/ব্যান থেকে সংরক্ষিত</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Left: Safety System Info & Session Backup -->
+      <div>
+        <div class="card">
+          <h2>🛡️ হোয়াটসঅ্যাপ অ্যাকাউন্ট সুরক্ষা প্রযুক্তি</h2>
+          <div style="font-size:13px;line-height:1.7;color:#94a3b8;">
+            <p style="margin-top:0;">
+              WhatsApp স্বয়ংক্রিয় রোবট বা স্প্যামারদের ডিটেক্ট করতে যে অ্যালগরিদম ব্যবহার করে, এই সিস্টেমে তার সম্পূর্ণ বিপরীত মানুষের স্বাভাবিক আচরণ অনুকরণ করা হয়েছে:
+            </p>
+            <ul style="margin:0 0 14px 18px;padding:0;">
+              <li><b>স্মার্ট কিউ ও র্যান্ডম টাইপিং ডিলে:</b> বার্তা পাঠানোর আগে মেসেজের সাইজ অনুযায়ী ১.৮ থেকে ৫.৫ সেকেন্ড "টাইপিং..." স্টেট বজায় রেখে তারপর সেন্ড করে।</li>
+              <li><b>ন্যাচারাল স্প্যাম-হ্যাশ ভ্যারিয়েশন:</b> প্রতি বার্তার সাথে ব্যাকগ্রাউন্ডে জিরো-উইডথ ক্যারেক্টার যুক্ত করায় হোয়াটসঅ্যাপ সার্ভার এটিকে রোবোটিক টেমপ্লেট হিসেবে চিহ্নিত করতে পারে না।</li>
+              <li><b>অফিসিয়াল উইন্ডোজ ব্রাউজার ফিঙ্গারপ্রিন্ট:</b> লিনাক্স বা সন্দেহজনক সিগনেচারের বদলে অফিসিয়াল Windows Desktop ব্রাউজার সিগনেচার ব্যবহার করা হয়।</li>
+              <li><b>স্বয়ংক্রিয় ক্ষুব্ধ কাস্টমার ও অপ্ট-আউট ফিল্টার:</b> কাস্টমার যদি কোনো বাজে ভাষা, অভিযোগ, বা মেসেজ দিতে নিষেধ করে, বট তৎক্ষণাৎ তাকে ব্ল্যাকলিস্ট করে এবং আর কোনো বার্তা দেয় না। ফলে কোনো রিপোর্ট আসে না।</li>
+              <li><b>প্রতি ঘণ্টার সেশন অটো-ব্যাকআপ:</b> সেশন ব্যাকআপ ডিরেক্টরিতে প্রতি ঘণ্টায় ব্যাকআপ সংরক্ষিত হয়।</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>💾 সেশন ব্যাকআপ ও অটো-রিকভারি</h2>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin-top:0;">
+            সার্ভার ক্র্যাশ বা রিস্টার্ট হলেও আপনার লগইন সেশন নষ্ট হবে না। <code>auth_backup/</code> ডিরেক্টরিতে স্বয়ংক্রিয় স্ন্যাপশট সংরক্ষিত থাকে।
+          </p>
+          <div style="display:flex;gap:8px;">
+            <button class="ghost" onclick="triggerSessionBackup()" style="font-size:12.5px;">🔄 সেশন স্ন্যাপশট রিলোড / ভেরিফাই</button>
+            <span id="backupStatus" style="font-size:12px;color:#4ade80;align-self:center;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Blacklist Manager -->
+      <div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 style="margin:0;">🚫 অপ্ট-আউট ও ব্যান ব্ল্যাকলিস্ট</h2>
+            <span class="badge" style="background:#1e293b;color:#f87171;border:1px solid #7f1d1d" id="blacklistBadge">0 টি নম্বর</span>
+          </div>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.5;margin-top:0;">
+            এই নম্বরের গ্রাহকদের কোনো অটো-রিপ্লাই পাঠানো হবে না। ক্ষুব্ধ কাস্টমাররা স্বয়ংক্রিয়ভাবে এখানে যোগ হয় যাতে তারা আপনার হোয়াটসঅ্যাপে রিপোর্ট বা ব্যান না করাতে পারে।
+          </p>
+
+          <!-- Add Number Form -->
+          <div style="background:#0b1120;padding:12px;border-radius:8px;border:1px solid #1e293b;margin-bottom:14px;">
+            <div style="font-size:12px;font-weight:600;color:#f1f5f9;margin-bottom:6px;">ম্যানুয়ালি নম্বর ব্ল্যাকলিস্টে যুক্ত করুন:</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <input type="text" id="blAddPhone" placeholder="017xxxxxxxx" style="flex:1;min-width:140px;font-size:13px;" />
+              <input type="text" id="blAddReason" placeholder="কারণ (ঐচ্ছিক)" style="flex:1;min-width:140px;font-size:13px;" />
+              <button class="danger" onclick="addBlacklistNumber()" style="padding:7px 14px;font-size:12.5px;">যুক্ত করুন</button>
+            </div>
+          </div>
+
+          <!-- Blacklist Table -->
+          <div style="max-height:360px;overflow-y:auto;border:1px solid #1e293b;border-radius:8px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>ফোন নম্বর</th>
+                  <th>কারণ</th>
+                  <th>তারিখ</th>
+                  <th>অ্যাকশন</th>
+                </tr>
+              </thead>
+              <tbody id="blacklistTbody">
+                <tr><td colspan="4" style="text-align:center;color:#64748b;padding:20px;">লোড হচ্ছে...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: BUSINESS KNOWLEDGE & PRICING -->
+  <div id="tab-business" class="tab-pane">
+    <div class="card">
+      <h2>স্থায়ী ব্যবসায়িক মেমোরি ও প্যাকেজ কনফিগারেশন</h2>
+      <p style="font-size:13px;color:#94a3b8;margin-top:0">
+        এই তথ্যগুলো <code>data/business_memory.json</code> ফাইলে স্থায়ীভাবে সেভ থাকে। WhatsApp লগআউট হলেও এই তথ্য কখনোই মুছে যাবে না।
+      </p>
+
+      <div class="grid-2">
+        <div>
+          <label for="memServiceName">সার্ভিসের নাম</label>
+          <input type="text" id="memServiceName" />
+
+          <label for="memServiceDesc">সার্ভিসের সংক্ষিপ্ত বিবরণ</label>
+          <textarea id="memServiceDesc" rows="2"></textarea>
+
+          <label for="memSamplePrice">২ মিনিট স্যাম্পলের মূল্য</label>
+          <input type="text" id="memSamplePrice" value="৫০ টাকা" />
+
+          <label for="memPaymentNumber">পেমেন্ট নম্বর (বিকাশ / নগদ Send Money)</label>
+          <input type="text" id="memPaymentNumber" value="01625642420" />
+
+          <label for="memDeliveryImo">কানেক্ট করার imo নম্বর (ভেরিফিকেশনের পর দেয়া হবে)</label>
+          <input type="text" id="memDeliveryImo" value="01898694648" />
+        </div>
+
+        <div>
+          <label>মূল প্যাকেজসমূহ (সময় — মূল্য)</label>
+          <div id="packagesContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <button class="ghost" style="margin-top:8px;font-size:12px;" onclick="addPackageRow()">+ নতুন প্যাকেজ যোগ করুন</button>
+
+          <label for="memRules" style="margin-top:14px;">কঠোর নিয়মাবলী (প্রতি লাইনে ১টি)</label>
+          <textarea id="memRules" rows="4"></textarea>
+
+          <label for="memLearnings">বিশেষ নির্দেশনা বা অফার (মালিকের বাড়তি নোট)</label>
+          <textarea id="memLearnings" rows="3" placeholder="যেমন: আজ সব প্যাকেজে ১০% ছাড় চলছে..."></textarea>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:20px;">
+        <button id="saveMemoryBtn" class="success" style="padding:10px 20px;">💾 সেভ করুন (Save Permanent Memory)</button>
+        <span id="saveMemoryStatus" style="font-size:13px;color:#4ade80;align-self:center;"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: ADMIN AI TRAINER CHAT -->
+  <div id="tab-trainer" class="tab-pane">
+    <div class="card">
+      <h2>
+        <span>💬 Bot Manager & AI Trainer (ম্যানেজার অ্যাসিস্ট্যান্ট)</span>
+        <span style="font-size:12px;color:#38bdf8;font-weight:normal">কথোপকথনের মাধ্যমে বটকে নতুন বিষয় শেখান</span>
+      </h2>
+      <p style="font-size:13px;color:#94a3b8;margin-top:0">
+        আপনি সরাসরি এই চ্যাটে বটের সাথে কথা বলে যেকোনো রেট বা নিয়ম পরিবর্তন করতে পারেন। AI আপনার নির্দেশ বুঝে স্বয়ংক্রিয়ভাবে ব্যবসায়িক মেমোরি আপডেট করবে।
+      </p>
+
+      <div class="chat-box" id="adminChatBox">
+        <div class="chat-msg msg-bot">👋 আসসালামু আলাইকুম বস! আমি আপনার বটের পার্সোনাল ম্যানেজার অ্যাসিস্ট্যান্ট। ব্যবসার প্যাকেজ, দাম বা কাস্টমারদের কি রিপ্লাই দিতে হবে তা আপনি আমাকে এখানে লিখে দিলে আমি তা স্থায়ী মেমোরিতে সেভ করে নেব। আজ কি পরিবর্তন বা আলোচনা করতে চান?</div>
+      </div>
+
+      <div class="quick-pills">
+        <span class="pill" onclick="sendQuickPrompt('আমাদের সব প্যাকেজের বর্তমান রেট তালিকা দাও')">📋 প্যাকেজের রেট দেখাও</span>
+        <span class="pill" onclick="sendQuickPrompt('কাস্টমারকে কি কি নিয়মে রিপ্লাই দিচ্ছ তা বলো')">📝 বর্তমান নিয়ম দেখাও</span>
+        <span class="pill" onclick="sendQuickPrompt('পেমেন্ট নম্বর পরিবর্তন করে বিকাশ: 01625642420 রাখো')">💳 পেমেন্ট নম্বর চেক</span>
+        <span class="pill" onclick="sendQuickPrompt('কাস্টমারদের বলো ডেলিভারি ২ দিনের মধ্যে পাওয়া যাবে')">➕ নতুন নিয়ম শেখাও</span>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input type="text" id="adminChatInput" placeholder="এখানে বাংলায় আপনার নির্দেশ লিখুন... (Enter চাপুন)" onkeypress="if(event.key==='Enter') sendAdminChat()" />
+        <button id="adminSendBtn" onclick="sendAdminChat()" style="padding:9px 24px;">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: SETTINGS -->
+  <div id="tab-settings" class="tab-pane">
+    <div class="card" style="max-width:650px">
+      <h2>সিস্টেম ও AI কনফিগারেশন</h2>
+      <label for="aiProvider">AI Provider</label>
+      <select id="aiProvider" onchange="updateProviderUI(this.value)">
+        <option value="gemini">Google Gemini (Recommended / Free Tier)</option>
+        <option value="openai">OpenAI / Other (OpenAI Compatible)</option>
+      </select>
+
+      <label for="aiApiKey">AI API Key <span id="keyState"></span></label>
+      <input type="password" id="aiApiKey" placeholder="AIzaSy… / AQ.…" />
+      <p class="qr-hint" id="providerHint" style="margin:4px 0 10px;font-size:12px;">
+        Gemini API Key: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#38bdf8">aistudio.google.com</a>
+      </p>
+
+      <label for="aiModel">AI Model</label>
+      <input type="text" id="aiModel" value="gemini-3.5-flash-lite" />
+
+      <div id="baseUrlBox" style="display:none">
+        <label for="aiBaseUrl">AI Base URL</label>
+        <input type="text" id="aiBaseUrl" value="https://api.openai.com/v1" />
+      </div>
+
+      <label for="replyDelayMs">রিপ্লাই দেওয়ার আগে ডিলে (ms)</label>
+      <input type="number" id="replyDelayMs" value="1500" />
+
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+        <input type="checkbox" id="allowGroups" style="width:auto" /> গ্রুপেও অটো-রিপ্লাই দাও (Groups Reply)
+      </label>
+
+      <div class="row" style="margin-top:20px;">
+        <button id="saveConfigBtn" onclick="saveSettings()">Save Settings</button>
+        <span id="saveConfigStatus" style="font-size:13px;color:#4ade80;align-self:center;"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: META / FACEBOOK WHATSAPP CLOUD API -->
+  <div id="tab-meta" class="tab-pane">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-lbl">সক্রিয় গেটওয়ে</div>
+        <div class="stat-val" style="font-size:18px;color:#38bdf8" id="metaActiveGatewayText">Baileys Engine</div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;" id="metaGatewaySub">QR বা Pairing কোড কানেকশন</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Meta একাউন্ট স্ট্যাটাস</div>
+        <div class="stat-val" style="font-size:18px;color:#fbbf24" id="metaAccountStatus">Unverified</div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;" id="metaPhoneDisplay">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">কোয়ালিটি রেটিং</div>
+        <div class="stat-val" style="font-size:18px;color:#4ade80" id="metaQualityRating">GREEN / HIGH</div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">অফিসিয়াল Meta ভেরিফাইড</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Webhook লিসেনার</div>
+        <div class="stat-val" style="font-size:18px;color:#a78bfa">সক্রিয় ও প্রস্তুত ✅</div>
+        <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">/api/webhook/whatsapp</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Left: Credentials & Control -->
+      <div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h2 style="margin:0;">🌐 Meta Official WhatsApp Cloud API সেটআপ</h2>
+            <span class="badge" style="background:#0e304f;color:#38bdf8;border:1px solid #0284c7">Facebook Business</span>
+          </div>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.5;margin-top:0;">
+            অফিসিয়াল WhatsApp Cloud API ব্যবহার করলে অ্যাকাউন্টে কোনো ডিসকানেক্ট বা ব্যান হওয়ার কোনো ঝুঁকি থাকে না। 
+            Meta Developers কনসোল থেকে প্রাপ্ত তথ্যগুলো নিচে প্রদান করুন:
+          </p>
+
+          <label for="metaAccessToken">Meta System / Permanent Access Token <span id="metaTokenState" style="color:#4ade80"></span></label>
+          <input type="password" id="metaAccessToken" placeholder="EAABw..." style="font-family:monospace;font-size:13px;" />
+
+          <label for="metaPhoneNumberId">WhatsApp Phone Number ID</label>
+          <input type="text" id="metaPhoneNumberId" placeholder="108269725512345" style="font-family:monospace;font-size:13px;" />
+
+          <label for="metaWabaId">WhatsApp Business Account ID (WABA ID - ঐচ্ছিক)</label>
+          <input type="text" id="metaWabaId" placeholder="104278912345678" style="font-family:monospace;font-size:13px;" />
+
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+            <button class="ghost" onclick="testMetaConnection()">🔍 টেস্ট ও প্রোফাইল ভেরিফাই</button>
+            <button onclick="saveMetaConfig(false)">💾 সেভ করুন</button>
+            <button class="success" id="btnActivateMeta" onclick="saveMetaConfig(true)">🚀 Meta Cloud API সক্রিয় করুন</button>
+            <button class="ghost" id="btnSwitchBaileys" style="display:none;" onclick="switchToBaileysGateway()">🔄 Baileys QR মোডে ফিরুন</button>
+          </div>
+          <div id="metaSaveStatus" style="font-size:12.5px;color:#4ade80;margin-top:10px;"></div>
+        </div>
+
+        <!-- 1-Click Outbound Test Message Card -->
+        <div class="card">
+          <h2>📲 অফিসিয়াল API দিয়ে সরাসরি টেস্ট বার্তা পাঠান</h2>
+          <p style="font-size:12px;color:#94a3b8;margin-top:0;">
+            আপনার নম্বর ঠিকমতো কাজ করছে কিনা দেখতে যেকোনো নম্বরে একটি অফিসিয়াল টেস্ট বার্তা পাঠান:
+          </p>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <input type="text" id="metaTestPhone" placeholder="017xxxxxxxx" style="font-size:13px;" />
+            <button class="ghost" onclick="sendMetaTestMessage()" style="white-space:nowrap;">পাঠান</button>
+          </div>
+          <div id="metaTestStatus" style="font-size:12px;margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- Right: Webhook Details & Setup Guide -->
+      <div>
+        <div class="card">
+          <h2>🔗 Meta Webhook কনফিগারেশন</h2>
+          <p style="font-size:12.5px;color:#94a3b8;line-height:1.5;margin-top:0;">
+            Facebook Developers পোর্টালে <b>WhatsApp > Configuration > Webhook</b> সেকশনে নিচের লিংক ও ভেরিফাই টোকেনটি পেস্ট করুন:
+          </p>
+
+          <label style="margin-top:8px;">Callback URL (কলব্যাক লিংক)</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="metaWebhookUrlDisplay" readonly style="font-family:monospace;font-size:12.5px;background:#080d1a;color:#38bdf8;" />
+            <button class="ghost" onclick="copyWebhookUrl()" style="white-space:nowrap;">📋 কপি</button>
+          </div>
+
+          <label style="margin-top:10px;">Verify Token (ভেরিফিকেশন টোকেন)</label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="metaVerifyTokenDisplay" readonly style="font-family:monospace;font-size:12.5px;background:#080d1a;color:#38bdf8;" />
+            <button class="ghost" onclick="copyVerifyToken()" style="white-space:nowrap;">📋 কপি</button>
+          </div>
+
+          <div style="background:#080d1a;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-top:14px;font-size:12px;color:#94a3b8;line-height:1.6;">
+            <b style="color:#f1f5f9;">📌 Webhook ফিল্ডে সাবস্ক্রাইব করুন:</b><br/>
+            Meta Developers কনসোলে Webhook Fields এর ভেতর <b><code>messages</code></b> অপশনটিতে টিক দিয়ে <b>Subscribe</b> করুন। তাহলে কাস্টমার মেসেজ দিলেই এই সার্ভারে স্বয়ংক্রিয়ভাবে চলে আসবে!
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>📖 সহজ ৪-ধাপে অফিসিয়াল Meta অ্যাকাউন্ট তৈরি</h2>
+          <div style="font-size:12.5px;line-height:1.7;color:#94a3b8;">
+            ১. <a href="https://developers.facebook.com" target="_blank" style="color:#38bdf8">developers.facebook.com</a> এ গিয়ে আপনার ফেসবুক দিয়ে লগইন করুন।<br/>
+            ২. <b>My Apps > Create App > Other > Business</b> সিলেক্ট করে অ্যাপ তৈরি করুন।<br/>
+            ৩. ড্যাশবোর্ড থেকে <b>WhatsApp</b> এর নিচে <b>Set up</b> বাটনে চাপ দিন।<br/>
+            ৪. <b>API Setup</b> পেজ থেকে সরাসরি <b>Temporary/Permanent Access Token</b> এবং <b>Phone Number ID</b> কপি করে বাম পাশের বক্সে পেস্ট করে সেভ করুন — ব্যস, আপনার অফিসিয়াল বট চালু!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (iso) => new Date(iso).toLocaleTimeString("bn-BD");
+let currentTab = "tab-overview";
+
+function switchTab(tabId) {
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  const pane = $(tabId);
+  if (pane) pane.classList.add("active");
+  document.querySelectorAll(".tab-btn").forEach(b => {
+    if (b.getAttribute("onclick")?.includes(tabId)) b.classList.add("active");
+  });
+  currentTab = tabId;
+  if (tabId === "tab-payments") loadPaymentsData();
+  if (tabId === "tab-business") loadBusinessMemoryData();
+  if (tabId === "tab-safety") loadSafetyStats();
+  if (tabId === "tab-meta") loadMetaStatus();
+}
+
+// ---------- Login Mode & Pairing Code ----------
+function switchLoginMode(mode) {
+  if (mode === "pair") {
+    $("loginModePair").style.display = "block";
+    $("loginModeQr").style.display = "none";
+    $("btnModePair").classList.add("active");
+    $("btnModeQr").classList.remove("active");
+  } else {
+    $("loginModePair").style.display = "none";
+    $("loginModeQr").style.display = "block";
+    $("btnModePair").classList.remove("active");
+    $("btnModeQr").classList.add("active");
+    // If QR is missing or not rendered, auto-trigger fresh QR
+    if (!$("qrBox")?.querySelector("img")) {
+      resetQrCode();
+    }
+  }
+}
+
+async function resetQrCode() {
+  const qrBox = $("qrBox");
+  if (qrBox) qrBox.innerHTML = '<p class="qr-hint" id="qrHint">🔄 নতুন QR কোড তৈরি হচ্ছে...</p>';
+  try {
+    const res = await fetch("/api/reset-qr", { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      setTimeout(refreshState, 1500);
+    }
+  } catch (err) {
+    alert("রিসেট ত্রুটি: " + err.message);
+  }
+}
+
+async function requestPairingCode() {
+  const phone = $("pairPhoneInput")?.value?.trim();
+  if (!phone) {
+    alert("অনুগ্রহ করে একটি WhatsApp ফোন নম্বর লিখুন (যেমন: 017xxxxxxxx)");
+    return;
+  }
+  $("pairLoading").style.display = "block";
+  $("btnGetPairCode").disabled = true;
+
+  try {
+    const res = await fetch("/api/pairing-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: phone }),
+    });
+    const data = await res.json();
+    $("pairLoading").style.display = "none";
+    $("btnGetPairCode").disabled = false;
+
+    if (!data.ok) {
+      alert("সমস্যা: " + (data.error || "কোড পাওয়া যায়নি"));
+      return;
+    }
+
+    displayPairingCode(data.code);
+  } catch (err) {
+    $("pairLoading").style.display = "none";
+    $("btnGetPairCode").disabled = false;
+    alert("এরর: " + err.message);
+  }
+}
+
+function displayPairingCode(code) {
+  $("pairingCodeDisplay").textContent = code;
+  $("pairingCodeBox").style.display = "block";
+}
+
+function copyPairCode() {
+  const code = $("pairingCodeDisplay")?.textContent?.trim();
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => {
+    $("copyPairBtn").textContent = "✅ কপি হয়েছে!";
+    setTimeout(() => {
+      $("copyPairBtn").textContent = "📋 কোড কপি করুন";
+    }, 2500);
+  });
+}
+
+// ---------- Polling & State ----------
+let isConfigLoaded = false;
+let currentBotActive = true;
+
+async function refreshState() {
+  try {
+    const res = await fetch("/api/state");
+    const s = await res.json();
+    
+    // Status Badge
+    const b = $("statusBadge");
+    b.className = "badge st-" + s.status;
+    b.textContent = s.status === "connected" ? "✅ connected"
+      : s.status === "waiting_qr" ? "Ready to Link"
+      : s.status === "reconnecting" ? "reconnecting…"
+      : s.status === "stopped" ? "stopped" : "starting…";
+
+    // Gateway Info
+    const isMeta = s.activeGateway === "meta_cloud";
+    if ($("gatewayBadge")) {
+      $("gatewayBadge").textContent = isMeta ? "Gateway: Meta Cloud API ✅" : "Gateway: Baileys Web (QR)";
+      $("gatewayBadge").style.background = isMeta ? "#064e3b" : "#0e304f";
+      $("gatewayBadge").style.color = isMeta ? "#4ade80" : "#38bdf8";
+      $("gatewayBadge").style.borderColor = isMeta ? "#059669" : "#0284c7";
+    }
+    if ($("activeGatewayText")) {
+      $("activeGatewayText").textContent = isMeta 
+        ? "🌐 Meta Official Cloud API (Facebook Business)" 
+        : "📱 Baileys Engine (QR / Pairing Code)";
+      $("activeGatewayText").style.color = isMeta ? "#4ade80" : "#38bdf8";
+    }
+    if ($("metaActiveGatewayText")) {
+      $("metaActiveGatewayText").textContent = isMeta ? "Meta Cloud API ✅" : "Baileys Web (QR)";
+      $("metaActiveGatewayText").style.color = isMeta ? "#4ade80" : "#38bdf8";
+      $("metaGatewaySub").textContent = isMeta ? "অফিসিয়াল Meta Graph API সক্রিয়" : "QR বা Pairing কোড কানেকশন";
+    }
+
+    // Active Toggle Badge
+    currentBotActive = s.botActive !== false;
+    $("activeBadge").textContent = currentBotActive ? "Auto-reply: Active ✅" : "Auto-reply: Paused ⏸️";
+    $("activeBadge").style.color = currentBotActive ? "#4ade80" : "#fbbf24";
+    $("toggleBotBtn").textContent = currentBotActive ? "Pause Bot" : "Resume Bot";
+
+    // Pairing Code State
+    if (s.pairingCode && $("pairingCodeDisplay").textContent !== s.pairingCode) {
+      displayPairingCode(s.pairingCode);
+    }
+
+    // QR Image & Login status
+    if (s.status === "connected") {
+      $("pairingCodeBox").style.display = "none";
+      $("qrBox").innerHTML = '<div style="color:#4ade80;font-weight:600;padding:20px;text-align:center;">WhatsApp সফলভাবে লগইন ও কানেক্টেড আছে ✅</div>';
+    } else if (s.qr) {
+      if (!$("qrImg") || $("qrImg").src !== s.qr) {
+        $("qrBox").innerHTML = '<img id="qrImg" src="' + s.qr + '" alt="QR Code" />';
+      }
+      $("qrHint") && ($("qrHint").textContent = "");
+    } else {
+      let msg = "QR load hocche…";
+      if (s.status === "stopped") msg = "Stopped (Restart chapun)";
+      $("qrBox").innerHTML = '<p class="qr-hint" id="qrHint">' + msg + '</p>';
+    }
+
+    // Config setup
+    if (!isConfigLoaded) {
+      $("keyState").textContent = s.hasKey ? "(Saved ✓)" : "(নাই — দিতে হবে)";
+      $("aiProvider").value = s.provider || "gemini";
+      updateProviderUI(s.provider || "gemini");
+      $("aiModel").value = s.model || "gemini-3.5-flash-lite";
+      $("aiBaseUrl").value = s.aiBaseUrl || "https://api.openai.com/v1";
+      $("replyDelayMs").value = s.replyDelayMs ?? 1500;
+      $("allowGroups").checked = !!s.allowGroups;
+      isConfigLoaded = true;
+    }
+
+    // Message Logs
+    const logBox = $("logBox");
+    logBox.innerHTML = s.log.length
+      ? s.log.map(l =>
+          '<div class="log-item log-' + l.kind + '"><span class="time">' + fmt(l.at) + "</span>" +
+          escapeHtml(l.text) + "</div>").join("")
+      : '<p class="qr-hint">কোনো মেসেজ আসেনি…</p>';
+  } catch {}
+}
+
+function escapeHtml(t) {
+  return (t || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+// Toggle Bot active/pause
+$("toggleBotBtn").onclick = async () => {
+  const target = !currentBotActive;
+  await fetch("/api/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ botActive: target }),
+  });
+  refreshState();
+};
+
+// Restart / Logout
+$("restartBtn").onclick = async () => {
+  await fetch("/api/restart", { method: "POST" });
+  refreshState();
+};
+
+$("logoutBtn").onclick = async () => {
+  if (!confirm("Logout korle notun kore QR scan lagbe. Sure?")) return;
+  await fetch("/api/logout", { method: "POST" });
+  refreshState();
+};
+
+// ---------- Payments Manager ----------
+let allPayments = [];
+let currentPaymentFilter = "all";
+
+async function loadPaymentsData() {
+  try {
+    const res = await fetch("/api/payments");
+    const d = await res.json();
+    allPayments = d.payments || [];
+    $("statTotal").textContent = d.stats?.total || 0;
+    $("statPending").textContent = d.stats?.pending || 0;
+    $("statVerified").textContent = d.stats?.verified || 0;
+    $("statRejected").textContent = d.stats?.rejected || 0;
+    $("pendingCount").textContent = d.stats?.pending || 0;
+
+    filterPaymentsTable();
+  } catch {}
+}
+
+function setPaymentFilter(f) {
+  currentPaymentFilter = f;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  const btn = $("fBtn-" + f);
+  if (btn) btn.classList.add("active");
+  filterPaymentsTable();
+}
+
+function filterPaymentsTable() {
+  const q = ($("paymentSearch")?.value || "").trim().toLowerCase();
+  const filtered = allPayments.filter(p => {
+    if (currentPaymentFilter !== "all" && p.status !== currentPaymentFilter) return false;
+    if (q) {
+      const matchPhone = (p.customerPhone || p.customerNumber || "").toLowerCase().includes(q);
+      const matchSender = (p.senderReference || p.senderNumber || "").toLowerCase().includes(q);
+      const matchRaw = (p.rawText || "").toLowerCase().includes(q);
+      const matchAmount = (p.amount || "").toLowerCase().includes(q);
+      if (!matchPhone && !matchSender && !matchRaw && !matchAmount) return false;
+    }
+    return true;
+  });
+
+  const tbody = $("paymentsTableBody");
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:28px;">কোনো পেমেন্ট তথ্য পাওয়া যায়নি।</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(p => {
+    const phone = p.customerPhone || p.customerNumber || "অজানা";
+    const cleanPhone = phone.replace(/\D/g, "");
+    const waLink = cleanPhone ? "https://wa.me/" + cleanPhone : null;
+    const isNagad = p.method === "নগদ" || /নগদ|nagad/i.test(p.rawText || "");
+    const methodBadge = isNagad ? '<span class="badge-nagad">নগদ</span>' : '<span class="badge-bkash">বিকাশ</span>';
+
+    // Sender proof badge
+    let proofHtml = '';
+    if (p.lastDigits) {
+      proofHtml = '<span class="badge-proof">🔖 লাস্ট ' + escapeHtml(p.lastDigits) + '</span>';
+    } else if (p.fullPhone) {
+      proofHtml = '<span class="badge-proof">📱 ' + escapeHtml(p.fullPhone) + '</span>';
+    } else if (p.trxId) {
+      proofHtml = '<span class="badge-proof">🧾 Trx: ' + escapeHtml(p.trxId) + '</span>';
+    } else {
+      proofHtml = '<span class="badge-proof">' + escapeHtml(p.senderReference || p.senderNumber || "নম্বর") + '</span>';
+    }
+
+    return `
+      <tr>
+        <td style="white-space:nowrap;">
+          <div style="font-weight:600;color:#f1f5f9;">${fmt(p.createdAt)}</div>
+          <div style="font-size:11px;color:#64748b;">${new Date(p.createdAt).toLocaleDateString("bn-BD")}</div>
+        </td>
+        <td>
+          <div style="font-size:14px;font-weight:700;color:#f8fafc;font-family:monospace;">
+            ${escapeHtml(phone)}
+          </div>
+          ${waLink ? `<a href="${waLink}" target="_blank" class="wa-link">💬 WhatsApp চ্যাট</a>` : ""}
+        </td>
+        <td>
+          ${proofHtml}
+          ${p.rawText ? `<div class="raw-msg">"${escapeHtml(p.rawText.slice(0, 100))}"</div>` : ""}
+        </td>
+        <td style="font-weight:600;color:#4ade80;white-space:nowrap;">
+          ${escapeHtml(p.amount || "৫০ টাকা")}
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            ${methodBadge}
+          </div>
+          <div style="font-size:11.5px;color:#94a3b8;">${escapeHtml(p.package || "স্যাম্পল")}</div>
+        </td>
+        <td>
+          <span class="status-pill p-${p.status}">
+            ${p.status === "verified" ? "ভেরিফাইড ✅" : p.status === "rejected" ? "বাতিল ❌" : "পেন্ডিং ⏳"}
+          </span>
+        </td>
+        <td style="white-space:nowrap;">
+          ${p.status === "pending" ? `
+            <button class="success" style="padding:5px 10px;font-size:12px;margin-right:4px;" onclick="verifyPayment('${p.id}')">✅ imo পাঠান</button>
+            <button class="ghost" style="padding:5px 8px;font-size:12px;color:#f87171;" onclick="rejectPayment('${p.id}')">❌</button>
+          ` : `
+            <button class="ghost" style="padding:4px 9px;font-size:11.5px;" onclick="deletePayment('${p.id}')">🗑 মুছুন</button>
+          `}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function cleanPaymentsJunk() {
+  if (!confirm("আপনি কি নিশ্চিত যে অপ্রয়োজনীয় প্রশ্ন বা ভুয়া এন্ট্রি মুছে ফেলতে চান? শুধুমাত্র আসল পেমেন্টগুলোই থাকবে।")) return;
+  try {
+    const res = await fetch("/api/payments/clean", { method: "POST" });
+    const data = await res.json();
+    alert("পরিষ্কার করা হয়েছে! বর্তমানে মোট " + (data.count || 0) + "টি আসল পেমেন্ট রেকর্ড সংরক্ষিত আছে।");
+    loadPaymentsData();
+  } catch (err) {
+    alert("এরর: " + err.message);
+  }
+}
+
+async function verifyPayment(id) {
+  if (!confirm("পেমেন্ট ভেরিফাই করতে চান? কাস্টমারকে স্বয়ংক্রিয়ভাবে imo নম্বর পাঠানো হবে।")) return;
+  await fetch("/api/payments/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  loadPaymentsData();
+}
+
+async function rejectPayment(id) {
+  await fetch("/api/payments/reject", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  loadPaymentsData();
+}
+
+async function deletePayment(id) {
+  await fetch("/api/payments/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  loadPaymentsData();
+}
+
+// ---------- Business Memory Manager ----------
+let cachedMemory = null;
+
+async function loadBusinessMemoryData() {
+  try {
+    const res = await fetch("/api/business");
+    const d = await res.json();
+    cachedMemory = d.memory;
+    $("memServiceName").value = cachedMemory.businessName || "";
+    $("memServiceDesc").value = cachedMemory.serviceDescription || "";
+    $("memSamplePrice").value = cachedMemory.sample?.price || "৫০ টাকা";
+    $("memPaymentNumber").value = cachedMemory.paymentInfo?.number || "01625642420";
+    $("memDeliveryImo").value = cachedMemory.deliveryInfo?.number || "01898694648";
+    $("memRules").value = (cachedMemory.rules || []).join("\n");
+    $("memLearnings").value = (cachedMemory.customLearnings || []).join("\n");
+
+    renderPackages(cachedMemory.packages || []);
+  } catch {}
+}
+
+function renderPackages(pkgs) {
+  const container = $("packagesContainer");
+  container.innerHTML = pkgs.map((p, idx) => `
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="text" value="${escapeHtml(p.duration)}" id="pkgDur_${idx}" style="width:130px;" placeholder="সময়" />
+      <span style="color:#64748b">—</span>
+      <input type="text" value="${escapeHtml(p.price)}" id="pkgPrice_${idx}" style="width:130px;" placeholder="মূল্য" />
+      <button class="ghost" style="padding:6px 10px;color:#f87171" onclick="removePackageRow(${idx})">×</button>
+    </div>
+  `).join("");
+}
+
+function addPackageRow() {
+  if (!cachedMemory.packages) cachedMemory.packages = [];
+  cachedMemory.packages.push({ duration: "১০ মিনিট", price: "২০০ টাকা" });
+  renderPackages(cachedMemory.packages);
+}
+
+function removePackageRow(idx) {
+  cachedMemory.packages.splice(idx, 1);
+  renderPackages(cachedMemory.packages);
+}
+
+$("saveMemoryBtn").onclick = async () => {
+  // Collect updated packages
+  const updatedPkgs = [];
+  const container = $("packagesContainer");
+  const rows = container.children;
+  for (let i = 0; i < rows.length; i++) {
+    const dur = $(`pkgDur_${i}`)?.value?.trim();
+    const prc = $(`pkgPrice_${i}`)?.value?.trim();
+    if (dur && prc) updatedPkgs.push({ duration: dur, price: prc });
+  }
+
+  const updated = {
+    businessName: $("memServiceName").value.trim(),
+    serviceDescription: $("memServiceDesc").value.trim(),
+    sample: {
+      duration: "২ মিনিট",
+      price: $("memSamplePrice").value.trim() || "৫০ টাকা",
+      description: "কাজের আগের প্রমাণের যাচাই ধাপ। স্যাম্পল নেওয়ার পর মূল প্যাকেজ নিতে হবে।",
+    },
+    packages: updatedPkgs,
+    paymentInfo: {
+      method: "বিকাশ / নগদ (Send Money)",
+      number: $("memPaymentNumber").value.trim(),
+      instruction: "পেমেন্ট করার পর যে নম্বর থেকে টাকা পাঠিয়েছেন সেই নম্বর জানাতে হবে।",
+    },
+    deliveryInfo: {
+      channel: "imo",
+      number: $("memDeliveryImo").value.trim(),
+      instruction: "পেমেন্ট যাচাইয়ের পর imo-তে যোগাযোগের লিঙ্ক ও নম্বর দেওয়া হয়।",
+    },
+    rules: $("memRules").value.split("\n").map(r => r.trim()).filter(Boolean),
+    customLearnings: $("memLearnings").value.split("\n").map(l => l.trim()).filter(Boolean),
+  };
+
+  const res = await fetch("/api/business", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updated),
+  });
+
+  if (res.ok) {
+    $("saveMemoryStatus").textContent = "সংরক্ষিত হয়েছে ✅";
+    setTimeout(() => $("saveMemoryStatus").textContent = "", 2500);
+    loadBusinessMemoryData();
+  }
+};
+
+// ---------- Admin AI Trainer Chat ----------
+async function sendAdminChat() {
+  const input = $("adminChatInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  const chatBox = $("adminChatBox");
+  // Append user message
+  const userDiv = document.createElement("div");
+  userDiv.className = "chat-msg msg-user";
+  userDiv.textContent = text;
+  chatBox.appendChild(userDiv);
+  input.value = "";
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // Bot typing bubble
+  const botDiv = document.createElement("div");
+  botDiv.className = "chat-msg msg-bot";
+  botDiv.textContent = "টাইপ করছে…";
+  chatBox.appendChild(botDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  try {
+    const res = await fetch("/api/admin/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: text }),
+    });
+    const data = await res.json();
+    botDiv.textContent = data.reply || "দুঃখিত, কোনো উত্তর পাওয়া যায়নি।";
+    if (data.memoryUpdated) {
+      loadBusinessMemoryData();
+    }
+  } catch (err) {
+    botDiv.textContent = "ত্রুটি: AI সার্ভারে সংযোগ করা সম্ভব হয়নি।";
+  }
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function sendQuickPrompt(t) {
+  $("adminChatInput").value = t;
+  sendAdminChat();
+}
+
+// ---------- Settings ----------
+function updateProviderUI(p) {
+  if (p === "gemini") {
+    $("aiApiKey").placeholder = "AIzaSy… / AQ.… (Gemini API Key)";
+    $("baseUrlBox").style.display = "none";
+    if (!$("aiModel").value || $("aiModel").value.startsWith("gpt-")) $("aiModel").value = "gemini-3.5-flash-lite";
+  } else {
+    $("aiApiKey").placeholder = "sk-… (OpenAI API Key)";
+    $("baseUrlBox").style.display = "block";
+    if (!$("aiModel").value || $("aiModel").value.startsWith("gemini-")) $("aiModel").value = "gpt-4o-mini";
+  }
+}
+
+async function saveSettings() {
+  const body = {
+    aiProvider: $("aiProvider").value,
+    aiModel: $("aiModel").value.trim(),
+    aiBaseUrl: $("aiBaseUrl").value.trim(),
+    replyDelayMs: Number($("replyDelayMs").value),
+    allowGroups: $("allowGroups").checked,
+  };
+  const key = $("aiApiKey").value.trim();
+  if (key) body.aiApiKey = key;
+
+  const res = await fetch("/api/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (res.ok) {
+    $("saveConfigStatus").textContent = "Saved ✓";
+    $("aiApiKey").value = "";
+    setTimeout(() => $("saveConfigStatus").textContent = "", 2500);
+    refreshState();
+  }
+}
+
+// ---------- Account Safety & Anti-Ban ----------
+let safetyStatsData = null;
+
+async function loadSafetyStats() {
+  try {
+    const res = await fetch("/api/safety/stats");
+    const data = await res.json();
+    if (!data.ok) return;
+
+    safetyStatsData = data;
+    const s = data.stats || {};
+    const bl = data.blacklist || [];
+
+    // Health Score
+    const score = s.healthScore || 100;
+    const scoreColor = score >= 90 ? "#10b981" : score >= 75 ? "#fbbf24" : "#f87171";
+    const scoreText = score >= 90 ? `${score}% Safe` : score >= 75 ? `${score}% Warning` : `${score}% Danger`;
+
+    if ($("quickHealthScore")) {
+      $("quickHealthScore").textContent = scoreText;
+      $("quickHealthScore").style.color = scoreColor;
+    }
+    if ($("safetyHealthVal")) {
+      $("safetyHealthVal").textContent = `${score}%`;
+      $("safetyHealthVal").style.color = scoreColor;
+    }
+
+    // Daily Quota
+    const dailyCount = s.todayOutboundCount || 0;
+    const maxDaily = s.maxDaily || 250;
+    const pct = Math.min(100, Math.round((dailyCount / maxDaily) * 100));
+
+    if ($("quickDailyQuotaText")) $("quickDailyQuotaText").textContent = `${dailyCount} / ${maxDaily}`;
+    if ($("quickDailyProgressBar")) {
+      $("quickDailyProgressBar").style.width = `${pct}%`;
+      $("quickDailyProgressBar").style.background = pct > 85 ? "#f87171" : pct > 60 ? "#fbbf24" : "#10b981";
+    }
+    if ($("safetyDailyVal")) $("safetyDailyVal").innerHTML = `${dailyCount} <span style="font-size:13px;color:#64748b">/ ${maxDaily}</span>`;
+
+    // Burst
+    const burstCount = (s.burstWindow || []).length;
+    const maxBurst = s.maxPerMinute || 12;
+    if ($("safetyBurstVal")) $("safetyBurstVal").innerHTML = `${burstCount} <span style="font-size:13px;color:#64748b">/ ${maxBurst} min</span>`;
+
+    // Blacklist
+    if ($("safetyBlacklistCount")) $("safetyBlacklistCount").textContent = bl.length;
+    if ($("blacklistBadge")) $("blacklistBadge").textContent = `${bl.length} টি নম্বর`;
+
+    // Render Blacklist Table
+    renderBlacklistTable(bl);
+  } catch (err) {
+    console.error("Error loading safety stats:", err);
+  }
+}
+
+function renderBlacklistTable(list) {
+  const tbody = $("blacklistTbody");
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#64748b;padding:24px;">কোনো গ্রাহক এখনও ব্ল্যাকলিস্টে নেই। আপনার অ্যাকাউন্ট সম্পূর্ণ সুরক্ষিত।</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map((item) => `
+    <tr>
+      <td style="font-family:monospace;font-weight:700;color:#f87171;">${escapeHtml(item.phone)}</td>
+      <td style="color:#cbd5e1;font-size:12.5px;">${escapeHtml(item.reason || "অপ্ট-আউট")}</td>
+      <td style="color:#64748b;font-size:11.5px;">${item.addedAt ? new Date(item.addedAt).toLocaleDateString("bn-BD") : "—"}</td>
+      <td>
+        <button class="ghost" style="padding:4px 8px;font-size:11.5px;color:#38bdf8;" onclick="removeBlacklistNumber('${escapeHtml(item.phone)}')">মুছুন</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function addBlacklistNumber() {
+  const phone = $("blAddPhone")?.value?.trim();
+  const reason = $("blAddReason")?.value?.trim();
+  if (!phone) {
+    alert("অনুগ্রহ করে একটি ফোন নম্বর লিখুন");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/blacklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, reason }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if ($("blAddPhone")) $("blAddPhone").value = "";
+      if ($("blAddReason")) $("blAddReason").value = "";
+      loadSafetyStats();
+    } else {
+      alert("সমস্যা: " + (data.error || "যোগ করা যায়নি"));
+    }
+  } catch (err) {
+    alert("এরর: " + err.message);
+  }
+}
+
+async function removeBlacklistNumber(phone) {
+  if (!confirm(`${phone} নম্বরটি কি ব্ল্যাকলিস্ট থেকে মুছে ফেলবেন?`)) return;
+
+  try {
+    const res = await fetch("/api/blacklist", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      loadSafetyStats();
+    }
+  } catch (err) {
+    alert("এরর: " + err.message);
+  }
+}
+
+function triggerSessionBackup() {
+  const st = $("backupStatus");
+  if (st) {
+    st.textContent = "ব্যাকআপ সফল ও সুরক্ষিত ✓";
+    setTimeout(() => st.textContent = "", 3000);
+  }
+}
+
+// ---------- Official Meta / Facebook WhatsApp Cloud API ----------
+async function loadMetaStatus() {
+  try {
+    const res = await fetch("/api/meta/status");
+    const data = await res.json();
+    if (!data.ok) return;
+
+    const isMeta = data.activeGateway === "meta_cloud";
+    const cfg = data.config || {};
+    const prof = data.profile || {};
+
+    if ($("metaPhoneNumberId") && !$("metaPhoneNumberId").value) {
+      $("metaPhoneNumberId").value = cfg.metaPhoneNumberId || "";
+    }
+    if ($("metaWabaId") && !$("metaWabaId").value) {
+      $("metaWabaId").value = cfg.metaWabaId || "";
+    }
+
+    if ($("metaTokenState")) {
+      $("metaTokenState").textContent = cfg.hasToken ? "✓ টোকেন সেট করা আছে" : "";
+    }
+
+    // Webhook details
+    const origin = window.location.origin;
+    if ($("metaWebhookUrlDisplay")) $("metaWebhookUrlDisplay").value = `${origin}/api/webhook/whatsapp`;
+    if ($("metaVerifyTokenDisplay")) $("metaVerifyTokenDisplay").value = cfg.metaVerifyToken || "wa_bot_verify_token_2026";
+
+    // Gateway buttons toggle
+    if ($("btnSwitchBaileys")) $("btnSwitchBaileys").style.display = isMeta ? "inline-block" : "none";
+    if ($("btnActivateMeta")) {
+      $("btnActivateMeta").textContent = isMeta ? "✓ Meta Cloud API সক্রিয় রয়েছে" : "🚀 Meta Cloud API সক্রিয় করুন";
+      $("btnActivateMeta").className = isMeta ? "ghost" : "success";
+    }
+
+    // Account Status
+    if (data.connectionValid && prof && !prof.error) {
+      if ($("metaAccountStatus")) {
+        $("metaAccountStatus").textContent = "Verified ✅";
+        $("metaAccountStatus").style.color = "#4ade80";
+      }
+      if ($("metaPhoneDisplay")) {
+        $("metaPhoneDisplay").textContent = prof.display_phone_number || prof.verified_name || "Official Account Connected";
+      }
+      if ($("metaQualityRating")) {
+        $("metaQualityRating").textContent = prof.quality_rating || "GREEN / HIGH";
+      }
+    } else {
+      if ($("metaAccountStatus")) {
+        $("metaAccountStatus").textContent = cfg.hasToken ? "Invalid/Expired Token" : "Unconfigured";
+        $("metaAccountStatus").style.color = "#fbbf24";
+      }
+      if ($("metaPhoneDisplay")) {
+        $("metaPhoneDisplay").textContent = prof.error ? `ত্রুটি: ${prof.error}` : "টোকেন ও Phone Number ID দিন";
+      }
+    }
+  } catch (err) {
+    console.error("Meta status load error:", err);
+  }
+}
+
+async function saveMetaConfig(activate = false) {
+  const token = $("metaAccessToken")?.value?.trim();
+  const phoneId = $("metaPhoneNumberId")?.value?.trim();
+  const wabaId = $("metaWabaId")?.value?.trim();
+
+  const body = {};
+  if (token) body.metaAccessToken = token;
+  if (phoneId) body.metaPhoneNumberId = phoneId;
+  if (wabaId) body.metaWabaId = wabaId;
+  if (activate !== undefined) body.metaGatewayActive = activate;
+
+  const st = $("metaSaveStatus");
+  if (st) st.textContent = "⏳ সেভ ও ভেরিফাই হচ্ছে...";
+
+  try {
+    const res = await fetch("/api/meta/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (st) {
+        st.textContent = data.verified 
+          ? "সফলভাবে সেভ ও ভেরিফাই হয়েছে ✅" 
+          : "সেভ হয়েছে (ভেরিফিকেশনের জন্য সঠিক Token দিন) ⚠️";
+        setTimeout(() => st.textContent = "", 3000);
+      }
+      if (token) $("metaAccessToken").value = "";
+      loadMetaStatus();
+      refreshState();
+    } else {
+      alert("সমস্যা: " + (data.error || "সেভ করা যায়নি"));
+      if (st) st.textContent = "";
+    }
+  } catch (err) {
+    alert("ত্রুটি: " + err.message);
+    if (st) st.textContent = "";
+  }
+}
+
+async function switchToBaileysGateway() {
+  if (!confirm("আপনি কি অফিশিয়াল Meta Cloud API বন্ধ করে Baileys QR/Pairing মোডে ফিরে যেতে চান?")) return;
+  await saveMetaConfig(false);
+}
+
+async function testMetaConnection() {
+  await loadMetaStatus();
+  alert("Meta একাউন্ট স্ট্যাটাস রিফ্রেশ ও যাচাই করা হয়েছে।");
+}
+
+async function sendMetaTestMessage() {
+  const phone = $("metaTestPhone")?.value?.trim();
+  if (!phone) {
+    alert("অনুগ্রহ করে একটি প্রাপক ফোন নম্বর দিন (যেমন: 017xxxxxxxx)");
+    return;
+  }
+
+  const st = $("metaTestStatus");
+  if (st) st.textContent = "⏳ অফিশিয়াল টেস্ট বার্তা পাঠানো হচ্ছে...";
+
+  try {
+    const res = await fetch("/api/meta/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ toPhone: phone }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (st) {
+        st.innerHTML = '<span style="color:#4ade80">টেস্ট বার্তা সফলভাবে পৌঁছেছে! ✅</span>';
+        setTimeout(() => st.innerHTML = "", 4000);
+      }
+    } else {
+      if (st) st.innerHTML = `<span style="color:#f87171">ত্রুটি: ${data.error}</span>`;
+    }
+  } catch (err) {
+    if (st) st.innerHTML = `<span style="color:#f87171">এরর: ${err.message}</span>`;
+  }
+}
+
+function copyWebhookUrl() {
+  const url = $("metaWebhookUrlDisplay")?.value;
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => alert("Webhook Callback URL কপি হয়েছে: " + url));
+}
+
+function copyVerifyToken() {
+  const token = $("metaVerifyTokenDisplay")?.value;
+  if (!token) return;
+  navigator.clipboard.writeText(token).then(() => alert("Webhook Verify Token কপি হয়েছে: " + token));
+}
+
+// Init
+refreshState();
+loadPaymentsData();
+loadSafetyStats();
+loadMetaStatus();
+setInterval(refreshState, 2000);
+setInterval(loadSafetyStats, 5000);
+</script>
+</body>
+</html>

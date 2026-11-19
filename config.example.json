@@ -1,0 +1,16 @@
+{
+  "systemPrompt": "তুমি একজন অত্যন্ত বিনয়ী ও পেশাদার সহকারী।",
+  "aiProvider": "gemini",
+  "aiApiKey": "",
+  "aiBaseUrl": "https://api.openai.com/v1",
+  "aiModel": "gemini-3.5-flash-lite",
+  "allowGroups": false,
+  "replyDelayMs": 1500,
+  "botActive": true,
+  "ownerNumber": "",
+  "metaGatewayActive": false,
+  "metaAccessToken": "",
+  "metaPhoneNumberId": "",
+  "metaWabaId": "",
+  "metaVerifyToken": "wa_bot_verify_token_2026"
+}

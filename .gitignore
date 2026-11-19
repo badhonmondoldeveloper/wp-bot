@@ -1,0 +1,9 @@
+node_modules/
+auth/
+data/auth_backup/
+data/payments.json
+data/blacklist.json
+config.json
+.env
+*.log
+.DS_Store
