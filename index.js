@@ -18,19 +18,36 @@ const {
 } = require("baileys");
 
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, "data");
-const AUTH_DIR = path.join(__dirname, "auth");
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const DATA_DIR = IS_VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "data");
+const AUTH_DIR = IS_VERCEL ? path.join("/tmp", "auth") : path.join(__dirname, "auth");
 const AUTH_BACKUP_DIR = path.join(DATA_DIR, "auth_backup");
-const CONFIG_FILE = path.join(__dirname, "config.json");
+const CONFIG_FILE = IS_VERCEL ? path.join("/tmp", "config.json") : path.join(__dirname, "config.json");
 const MEMORY_FILE = path.join(DATA_DIR, "business_memory.json");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
 const BLACKLIST_FILE = path.join(DATA_DIR, "blacklist.json");
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!fs.existsSync(AUTH_BACKUP_DIR)) {
-  fs.mkdirSync(AUTH_BACKUP_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(AUTH_BACKUP_DIR)) {
+    fs.mkdirSync(AUTH_BACKUP_DIR, { recursive: true });
+  }
+  if (IS_VERCEL) {
+    const localMemory = path.join(__dirname, "data", "business_memory.json");
+    if (fs.existsSync(localMemory) && !fs.existsSync(MEMORY_FILE)) {
+      try { fs.copyFileSync(localMemory, MEMORY_FILE); } catch {}
+    }
+    const localConfig = fs.existsSync(path.join(__dirname, "config.json"))
+      ? path.join(__dirname, "config.json")
+      : path.join(__dirname, "config.example.json");
+    if (fs.existsSync(localConfig) && !fs.existsSync(CONFIG_FILE)) {
+      try { fs.copyFileSync(localConfig, CONFIG_FILE); } catch {}
+    }
+  }
+} catch (e) {
+  console.warn("Filesystem init warning:", e.message);
 }
 
 // ---------- Business Memory Engine ----------
@@ -1871,11 +1888,15 @@ process.on("SIGTERM", () => {
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  console.log(`Dashboard: http://localhost:${PORT}`);
-  startBot().catch((e) => {
-    lastError = e.message;
-    addLog("error", "Bot start korte parini: " + e.message);
-    console.error(e);
+if (require.main === module || !IS_VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Dashboard: http://localhost:${PORT}`);
+    startBot().catch((e) => {
+      lastError = e.message;
+      addLog("error", "Bot start korte parini: " + e.message);
+      console.error(e);
+    });
   });
-});
+}
+
+module.exports = app;
